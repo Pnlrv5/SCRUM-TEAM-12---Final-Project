@@ -26,5 +26,8 @@ Logan — Frontend Developer
 
 ## Repository Branches
 - **main** — Final integrated code
-- Will-Backend
-- Logan-Frontend
+- will-backend
+- logan-frontend
+- paige-docs
+- james-diagrams
+  
