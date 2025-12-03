@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Reservation List</h2>
+
+<table border="1">
+    <tr>
+        <th>Name</th>
+        <th>Flight Number</th>
+        <th>Price</th>
+        <th>Reservation Code</th>
+    </tr>
+
+    {% for r in reservations %}
+    <tr>
+        <td>{{ r.name }}</td>
+        <td>{{ r.flight_no }}</td>
+        <td>{{ r.price }}</td>
+        <td>{{ r.code }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% endblock %}
