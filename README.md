@@ -30,13 +30,9 @@ Branches
 
 main – final code
 
-paige-docs – documentation & screenshots
-
-james-diagrams – diagrams + use-case descriptions
-
 will-backend – backend logic & database
+
+logan-frontend – UI, templates, routes
 
 pip install -r requirements.txt
 python app.py
-
-logan-frontend – UI, templates, routes
