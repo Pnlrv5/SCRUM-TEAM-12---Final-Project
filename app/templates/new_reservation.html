@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Create New Reservation</h2>
+
+<form action="/new_reservation" method="POST">
+    <label>Passenger Name:</label>
+    <input type="text" name="name" required>
+    <br><br>
+
+    <label>Flight Number:</label>
+    <input type="text" name="flight_no" required>
+    <br><br>
+
+    <label>Ticket Price:</label>
+    <input type="number" name="price" required>
+    <br><br>
+
+    <button type="submit">Save Reservation</button>
+</form>
+
+{% endblock %}
