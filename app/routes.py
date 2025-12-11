@@ -115,3 +115,15 @@ def reservation_list():
 
     return render_template("reservation_list.html", reservations=reservations)
 
+#route to delete from database
+@routes.route("/delete_reservation/<int:reservation_id>", methods=["POST"])
+def delete_reservation(reservation_id):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("DELETE FROM reservations WHERE id = %s", (reservation_id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return redirect(url_for("routes.reservation_list"))
