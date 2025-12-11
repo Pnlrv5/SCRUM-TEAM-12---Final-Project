@@ -7,25 +7,23 @@ routes = Blueprint('routes', __name__)
 def home():
     return render_template('index.html')
 
+def get_cost_matrix():
+    return [[100, 75, 50, 100] for _ in range(12)]
+
 @routes.route('/admin_login', methods=['GET', 'POST'])
 def admin_login():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "").strip()
-
-        # Quick validation for blank fields
         if not username or not password:
             return render_template(
                 "admin_login.html",
                 error="Username and password are required... try again."
             )
-
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT * FROM admin_users WHERE username=%s", (username,))
         admin = cursor.fetchone()
-
-        
         if not admin or password != admin["password_hash"]:
             return render_template(
                 "admin_login.html",
@@ -33,8 +31,11 @@ def admin_login():
             )
         return redirect(url_for("routes.admin_dashboard"))
     return render_template("admin_login.html")
-
-
 @routes.route("/admin_dashboard")
 def admin_dashboard():
     return render_template("admin_dashboard.html")
+
+@routes.route('/new_reservation', methods=['GET', 'POST'])
+def mew_reservation():
+    
+    return render_template("reservation_list")
