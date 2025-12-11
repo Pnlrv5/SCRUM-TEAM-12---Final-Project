@@ -1,5 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
+
+<!--Added error from logan's frontend.-->
+{% if error %}
+<p style="color: red;">{{ error }}</p>
+{% endif %}
+
 <h2>Admin Login</h2>
 <form action="/admin_login" method="POST">
     <label>Username:</label>
