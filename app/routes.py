@@ -47,15 +47,20 @@ def new_reservation():
         #inputs need to be in scope for entire function
         first = request.form.get("first_name", "").strip()
         last = request.form.get("last_name", "").strip()
+        email = request.form.get("email", "").strip()
+        flight_no = request.form.get("flight_number", "").strip().upper()
         row  = request.form.get("row")
         seat = request.form.get("seat")
 
-    #error check
-        if not first or not last or not seat or not row:
-            return render_template("new_reservation.html", error="Must have all fields filled out.")
+        #error check
+        if not first or not last or not email or not flight_no or not seat or not row:
+            return render_template("new_reservation.html",
+                                     error="Must have all fields filled out.")
     
         row = int(row)
         seat = int(seat)
+        passenger_name = f"{first} {last}"
+        seat_number = f"{row}-{seat}"
 
 
         conn = get_connection()
@@ -63,12 +68,14 @@ def new_reservation():
 
         cursor.execute("""
             SELECT * FROM reservations 
-            WHERE row_no = %s AND seat_no = %s""", (row, seat))
-        existing = cursor.fetchall()
+            WHERE flight_number=%s AND seat_number=%s""", (flight_no, seat_number))
+        existing = cursor.fetchone()
         #we are checing if the seat is already taken, if it is then we return a message saying so.
 
         if existing:
-            return render_template("new_reservation.html",error=f"Row {row}, Seat {seat} is taken.")
+            cursor.close()
+            conn.close()
+            return render_template("new_reservation.html",error=f"Seat {seat_number} is already taken on Flight {flight_no}.")
     
         cost_matrix = get_cost_matrix()
         #account for 13 and 5
@@ -76,15 +83,15 @@ def new_reservation():
 
         #we need to generate a random string code using the random and string imports.
         #this should work i think.
-        seatcode = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+        reservation_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
     
         #inputs all of our values we have created and extrapolated into the DB.
         cursor.execute("""
-            INSERT INTO reservations (first_name, last_name, row_no, seat_no, price, code)
+            INSERT INTO reservations (passenger_name, passenger_email, flight_number, seat_number, price, reservation_code)
             VALUES (%s, %s, %s, %s, %s, %s)
-            """, (first, last, row, seat, price, seatcode))
+            """, (passenger_name, email, flight_no, seat_number, price, reservation_code))
+        
         conn.commit()
-
         cursor.close()
         conn.close()
     
@@ -104,7 +111,7 @@ def reservation_list():
     cursor.close()
     conn.close()
 
-    
+
 
     return render_template("reservation_list.html", reservations=reservations)
 
