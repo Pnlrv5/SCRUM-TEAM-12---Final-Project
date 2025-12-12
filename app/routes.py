@@ -13,11 +13,11 @@ def home():
 def get_cost_matrix():
     return [[100, 75, 50, 100] for _ in range(12)]
 
-# ✅ helper for protecting admin-only routes
+# helper for protecting admin-only routes
 def admin_required():
     return session.get("is_admin") is True
 
-# ✅ ALWAYS use the instance DB (this is where Flask expects it)
+#  ALWAYS use the instance DB (this is where Flask expects it)
 def get_db_path():
     # current_app.instance_path points to ./instance
     return os.path.join(current_app.instance_path, "reservations.db")
@@ -27,7 +27,7 @@ def get_conn():
     conn.row_factory = sqlite3.Row
     return conn
 
-# ✅ If tables don’t exist yet, create them from schema.sql
+#  If tables don’t exist yet, create them from schema.sql
 def ensure_schema():
     conn = get_conn()
     cur = conn.cursor()
@@ -61,7 +61,7 @@ def admin_login():
         conn = get_conn()
         cursor = conn.cursor()
 
-        # ✅ table is admins (per schema.sql), placeholders are ?
+        #  table is admins (per schema.sql), placeholders are ?
         cursor.execute("SELECT username, password FROM admins WHERE username = ?", (username,))
         admin = cursor.fetchone()
 
