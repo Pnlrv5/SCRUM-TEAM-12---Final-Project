@@ -1,6 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for
 from .database import get_connection
-from .chart_generation import generate_chart_image
 import random
 import string
 
@@ -55,7 +54,8 @@ def new_reservation():
 
         #error check
         if not first or not last or not email or not flight_no or not seat or not row:
-            return render_template("new_reservation.html", error="Must have all fields filled out.")
+            return render_template("new_reservation.html",
+                                     error="Must have all fields filled out.")
     
         row = int(row)
         seat = int(seat)
@@ -96,9 +96,7 @@ def new_reservation():
         conn.close()
     
         return redirect(url_for("routes.reservation_list"))
-    chart_img = generate_chart_image()
-    return render_template("new_reservation.html", chart_img=chart_img)
-
+    return render_template("new_reservation.html")
 
 
 #reservations route, very short.
@@ -117,3 +115,15 @@ def reservation_list():
 
     return render_template("reservation_list.html", reservations=reservations)
 
+#route to delete from database
+@routes.route("/delete_reservation/<int:reservation_id>", methods=["POST"])
+def delete_reservation(reservation_id):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("DELETE FROM reservations WHERE id = %s", (reservation_id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return redirect(url_for("routes.reservation_list"))
