@@ -23,7 +23,12 @@
         <td>${{ r.price }}</td>
         <td>{{ r.reservation_code }}</td>
         <td>{{ r.reservation_date }}</td>
-
+        <td><!-- delete button per instructions-->
+            <form action="/delete_reservation/{{ r.id }}" method="POST" 
+                  onsubmit="return confirm('Delete this reservation?');">
+                <button type="submit">Delete</button>
+            </form>
+        </td>
     </tr>
     {% endfor %}
 </table>
