@@ -13,7 +13,7 @@ def generate_chart_image():
     rows = 12
     cols = 4
 
-    #connects to the database and gets all seasts that are reserved 
+    #connects to the database and gets all seats that are reserved 
     engine = create_engine(f"sqlite:///{DB_PATH}")
     metadata = MetaData()
     reservations = Table("reservations", metadata, autoload_with=engine)
@@ -23,7 +23,8 @@ def generate_chart_image():
     reserved_set = {(r, c) for r, c in reserved_seats}
     grid = [[False for _ in range(cols)] for _ in range(rows)]
     for r, c in reserved_set:
-        if 0 <= r < rows and 0 <= c < cols: grid[r][c] = True
+        if 0 <= r < rows and 0 <= c < cols:
+            grid[r][c] = True
 
     #create the chart
     fig, ax = plt.subplots(figsize=(cols *.6, rows *.4))

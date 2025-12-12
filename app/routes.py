@@ -1,7 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for
-from .database import get_connection
-import random
-import string
+from .chart_generation import generate_chart_image
+import sqlite3
 
 
 routes = Blueprint('routes', __name__)
@@ -21,7 +20,7 @@ def admin_login():
         if not username or not password:
             return render_template(
                 "admin_login.html",error="Username and password are required... try again.")
-        conn = get_connection()
+        conn = sqlite3.connect('reservations.db')
         cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT * FROM admin_users WHERE username=%s", (username,))
         admin = cursor.fetchone()
@@ -42,68 +41,78 @@ def admin_dashboard():
 # reservation route
 @routes.route('/new_reservation', methods=['GET', 'POST'])
 def new_reservation():
+    chart_img = generate_chart_image()
     if request.method == 'POST':
 
-        #inputs need to be in scope for entire function
         first = request.form.get("first_name", "").strip()
         last = request.form.get("last_name", "").strip()
-        email = request.form.get("email", "").strip()
-        flight_no = request.form.get("flight_number", "").strip().upper()
-        row  = request.form.get("row")
-        seat = request.form.get("seat")
-
-        #error check
-        if not first or not last or not email or not flight_no or not seat or not row:
-            return render_template("new_reservation.html",
-                                     error="Must have all fields filled out.")
+        seatRow  = request.form.get("row")
+        seatColumn = request.form.get("seat")
+        if not first or not last or not seatColumn or not seatRow:
+            return render_template("new_reservation.html", error="Must have all fields filled out.", chart_img=chart_img)
     
-        row = int(row)
-        seat = int(seat)
-        passenger_name = f"{first} {last}"
+        #1 index to 0 index
+        row = int(seatRow) - 1
+        seat = int(seatColumn) - 1
+        passengerName = f"{first} {last}"
         seat_number = f"{row}-{seat}"
 
+        conn = sqlite3.connect('reservations.db')
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
 
-        conn = get_connection()
-        cursor = conn.cursor(dictionary=True)
-
+        #Uses db column names in reservations.db
         cursor.execute("""
             SELECT * FROM reservations 
-            WHERE flight_number=%s AND seat_number=%s""", (flight_no, seat_number))
+            WHERE seatRow=? AND seatColumn=?""", (row, seat))
         existing = cursor.fetchone()
-        #we are checing if the seat is already taken, if it is then we return a message saying so.
 
         if existing:
             cursor.close()
             conn.close()
-            return render_template("new_reservation.html",error=f"Seat {seat_number} is already taken on Flight {flight_no}.")
+            return render_template("new_reservation.html",error=f"Seat {seat_number} is already taken.", chart_img=chart_img)
     
         cost_matrix = get_cost_matrix()
-        #account for 13 and 5
         price = cost_matrix[row - 1][seat - 1]
+        pattern = "INFOTC4320"
+        i = 0
+        j = 0
+        result = []
 
-        #we need to generate a random string code using the random and string imports.
-        #this should work i think.
-        reservation_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+        while i < len(first) or j < len(pattern):
+            if i < len(first):
+                result.append(first[i])
+                i += 1
+            if j < len(pattern):
+                result.append(pattern[j])
+                j += 1
+        reservation_code = ''.join(result)
     
-        #inputs all of our values we have created and extrapolated into the DB.
+        #SQLite DB schema
         cursor.execute("""
-            INSERT INTO reservations (passenger_name, passenger_email, flight_number, seat_number, price, reservation_code)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            """, (passenger_name, email, flight_no, seat_number, price, reservation_code))
+            INSERT INTO reservations (passengerName, seatRow, seatColumn, eTicketNumber)
+            VALUES (?, ?, ?, ?)
+            """, (passengerName, row, seat, reservation_code))
         
         conn.commit()
         cursor.close()
         conn.close()
-    
-        return redirect(url_for("routes.reservation_list"))
-    return render_template("new_reservation.html")
+        #updates seating chart
+        chart_img = generate_chart_image()
+        
+        success = f"Congrats {first}! Row: {row + 1}, Seat: {seat + 1} is now reserved for you. Enjoy your Trip! Your eTicket number is: {reservation_code}."
+        return render_template("new_reservation.html", chart_img=chart_img, success=success)
+
+    return render_template("new_reservation.html", chart_img=chart_img)
+
 
 
 #reservations route, very short.
 @routes.route("/reservations")
 def reservation_list():
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    conn = sqlite3.connect('reservations.db')
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
 
     cursor.execute("SELECT * FROM reservations")
     reservations = cursor.fetchall()
@@ -118,10 +127,10 @@ def reservation_list():
 #route to delete from database
 @routes.route("/delete_reservation/<int:reservation_id>", methods=["POST"])
 def delete_reservation(reservation_id):
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    conn = sqlite3.connect('reservations.db')
+    cursor = conn.cursor()
 
-    cursor.execute("DELETE FROM reservations WHERE id = %s", (reservation_id,))
+    cursor.execute("DELETE FROM reservations WHERE id = ?", (reservation_id,))
     conn.commit()
     cursor.close()
     conn.close()
