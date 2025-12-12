@@ -1,22 +1,20 @@
 {% extends "base.html" %}
 {% block content %}
 
-
-<!--Added error from logan's frontend.-->
 {% if error %}
-<p style="color: red;">{{ error }}</p>
+  <p style="color:red">{{ error }}</p>
 {% endif %}
 
 <h2>Admin Login</h2>
-<form action="/admin_login" method="POST">
-    <label>Username:</label>
-    <input type="text" name="username" required>
 
-    <br><br>
-    <label>Password:</label>
-    <input type="password" name="password" required>
+<form method="POST" action="{{ url_for('routes.admin_login') }}">
+  <label>Username:</label><br>
+  <input type="text" name="username" required><br><br>
 
-    <br><br>
-    <button type="submit">Login</button>
+  <label>Password:</label><br>
+  <input type="password" name="password" required><br><br>
+
+  <button type="submit">Login</button>
 </form>
+
 {% endblock %}
