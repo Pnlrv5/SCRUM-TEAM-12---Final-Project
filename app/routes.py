@@ -34,7 +34,31 @@ def admin_login():
 
 @routes.route("/admin_dashboard")
 def admin_dashboard():
-    return render_template("admin_dashboard.html")
+    cost_matrix = get_cost_matrix()
+    total_price = 0
+    reservations = []
+    conn = sqlite3.connect('reservations.db')
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, passengerName, seatRow, seatColumn, eTicketNumber FROM reservations")
+    rows = cursor.fetchall()
+    for row in rows:
+        r = row['seatRow']
+        c = row['seatColumn']
+        price = cost_matrix[r][c]
+        total_price += price
+        reservations.append({
+            'id': row['id'],
+            'name': row['passengerName'],
+            'row': r + 1,  # 1-indexed
+            'col': c + 1,  # 1-indexed
+            'eticket': row['eTicketNumber'],
+            'price': price
+        })
+    cursor.close()
+    conn.close()
+    chart_img = generate_chart_image()
+    return render_template("admin_dashboard.html", reservations=reservations, total_price=total_price, chart_img=chart_img)
 
 
 
