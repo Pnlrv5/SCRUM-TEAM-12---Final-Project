@@ -28,13 +28,11 @@ def admin_login():
         if not username or not password:
             return render_template(
                 "admin_login.html",
-                error="Username and password are required... try again."
+                error="Username and password are required."
             )
 
-        # ✅ SQLAlchemy query (NO sqlite3)
         admin = AdminUser.query.filter_by(username=username).first()
 
-        # Matches your seed: AdminUser(username="admin", password_hash="admin123")
         if not admin or password != admin.password_hash:
             return render_template(
                 "admin_login.html",
@@ -63,7 +61,21 @@ def admin_dashboard():
     reservations = Reservation.query.order_by(
         Reservation.created_at.desc(), Reservation.id.desc()
     ).all()
-    return render_template("admin_dashboard.html", reservations=reservations)
+
+    cost_matrix = get_cost_matrix()
+    total_price = 0.0
+
+    for r in reservations:
+        try:
+            total_price += float(cost_matrix[r.seatRow][r.seatColumn])
+        except Exception:
+            pass
+
+    return render_template(
+        "admin_dashboard.html",
+        reservations=reservations,
+        total_price=total_price
+    )
 
 
 @routes.route("/new_reservation", methods=["GET", "POST"])
@@ -79,31 +91,29 @@ def new_reservation():
         if not first or not last or not seatRow or not seatColumn:
             return render_template(
                 "new_reservation.html",
-                error="Must have all fields filled out.",
+                error="All fields are required.",
                 chart_img=chart_img
             )
 
         row = int(seatRow) - 1
         seat = int(seatColumn) - 1
-        passengerName = f"{first} {last}"
-        seat_number = f"{row}-{seat}"
 
-        existing = Reservation.query.filter_by(seatRow=row, seatColumn=seat).first()
+        existing = Reservation.query.filter_by(
+            seatRow=row,
+            seatColumn=seat
+        ).first()
+
         if existing:
             return render_template(
                 "new_reservation.html",
-                error=f"Seat {seat_number} is already taken.",
+                error="That seat is already taken.",
                 chart_img=chart_img
             )
 
-        # pricing matrix (not stored unless you add a column)
-        cost_matrix = get_cost_matrix()
-        _price = cost_matrix[row][seat]
-
-        # reservation code (interleaving first name with pattern)
         pattern = "INFOTC4320"
         i = j = 0
         result = []
+
         while i < len(first) or j < len(pattern):
             if i < len(first):
                 result.append(first[i])
@@ -111,23 +121,32 @@ def new_reservation():
             if j < len(pattern):
                 result.append(pattern[j])
                 j += 1
+
         reservation_code = "".join(result)
 
         r = Reservation(
-            passengerName=passengerName,
+            passengerName=f"{first} {last}",
             seatRow=row,
             seatColumn=seat,
-            eTicketNumber=reservation_code,
+            eTicketNumber=reservation_code
         )
+
         db.session.add(r)
         db.session.commit()
 
-        chart_img = generate_chart_image() if generate_chart_image else None
         success = (
-            f"Congrats {first}! Row: {row + 1}, Seat: {seat + 1} is now reserved. "
-            f"eTicket: {reservation_code}."
+            f"Reservation confirmed for {first} {last}. "
+            f"Row {row + 1}, Seat {seat + 1}. "
+            f"eTicket: {reservation_code}"
         )
-        return render_template("new_reservation.html", chart_img=chart_img, success=success)
+
+        chart_img = generate_chart_image() if generate_chart_image else None
+
+        return render_template(
+            "new_reservation.html",
+            success=success,
+            chart_img=chart_img
+        )
 
     return render_template("new_reservation.html", chart_img=chart_img)
 
@@ -143,9 +162,10 @@ def delete_reservation(reservation_id):
     if not session.get("admin_logged_in"):
         return redirect(url_for("routes.admin_login"))
 
-    r = Reservation.query.get_or_404(reservation_id)
-    db.session.delete(r)
+    reservation = Reservation.query.get_or_404(reservation_id)
+    db.session.delete(reservation)
     db.session.commit()
+
     return redirect(url_for("routes.reservation_list"))
 
 
