@@ -13,8 +13,6 @@ from flask import (
     current_app
 )
 
-# If you have chart generation in your project, keep this import.
-# If this file/module name is different in your repo, adjust it.
 try:
     from .chart_generation import generate_chart_image
 except Exception:
@@ -55,8 +53,7 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         """
     )
 
-    # If your project already has a reservations table schema you want,
-    # you can change the columns here. This is a safe default.
+    
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS reservations (
@@ -88,7 +85,7 @@ def ensure_default_admin(conn: sqlite3.Connection) -> None:
 # ----------------------------
 @routes.route("/")
 def index():
-    # Adjust this template name if your project uses something else
+    
     return render_template("index.html")
 
 
@@ -136,7 +133,7 @@ def admin_dashboard():
     return render_template("admin_dashboard.html", reservations=reservations)
 
 
-# Optional: if your project has a chart endpoint
+
 @routes.route("/chart")
 def chart():
     if generate_chart_image is None:
@@ -145,6 +142,5 @@ def chart():
     if not session.get("admin_logged_in"):
         return redirect(url_for("routes.admin_login"))
 
-    # generate_chart_image should return something your templates/route can use
-    # Adjust as needed for your project.
+
     return generate_chart_image()
