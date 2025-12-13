@@ -1,3 +1,6 @@
+import os
+print("ROUTES FILE RUNNING:", os.path.abspath(__file__))
+
 from flask import Blueprint, render_template, request, redirect, url_for, session
 from .database import db
 from .models import AdminUser, Reservation
