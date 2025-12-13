@@ -1,19 +1,22 @@
-import os
 from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
 from app.routes import routes
+import os
+
+db = SQLAlchemy()
 
 def create_app():
-    base_dir = os.path.abspath(os.path.dirname(__file__))
+    app = Flask(__name__)
 
-    app = Flask(
-        __name__,
-        instance_path=os.path.join(base_dir, "instance"),
-        instance_relative_config=True,
-    )
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///reservations.db"
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["SECRET_KEY"] = "secret-key"
 
-    os.makedirs(app.instance_path, exist_ok=True)
-    app.secret_key = "dev-secret-key"
+    db.init_app(app)
     app.register_blueprint(routes)
+
+    with app.app_context():
+        db.create_all()
 
     return app
 
