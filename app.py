@@ -1,6 +1,6 @@
-from flask import Flask
 import os
-from app.routes import routes, init_db
+from flask import Flask
+from app.routes import routes
 
 def create_app():
     base_dir = os.path.abspath(os.path.dirname(__file__))
@@ -13,10 +13,6 @@ def create_app():
 
     app.secret_key = "dev-secret-key"
     app.register_blueprint(routes)
-
-    with app.app_context():
-        init_db()
-
     return app
 
 app = create_app()
