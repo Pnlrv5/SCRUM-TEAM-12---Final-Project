@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Admin Dashboard</h2>
+
+<img src="{{ chart_img }}" alt="Seating Chart">
+
+<p>Total Price: ${{ "%.2f"|format(total_price) }}</p>
+
+<h3>Reservation List</h3>
+<ul>
+{% for res in reservations %}
+<li>{{ res.name }}: Row {{ res.row }} Seat {{ res.col }} -- {{ res.eticket }}
+<form action="{{ url_for('routes.delete_reservation', reservation_id=res.id) }}" method="post" style="display:inline;">
+<button type="submit">Delete</button>
+</form>
+</li>
+{% endfor %}
+</ul>
+
+{% endblock %}
