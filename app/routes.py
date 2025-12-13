@@ -60,7 +60,9 @@ def admin_dashboard():
     if not session.get("admin_logged_in"):
         return redirect(url_for("routes.admin_login"))
 
-    reservations = Reservation.query.order_by(Reservation.created_at.desc(), Reservation.id.desc()).all()
+    reservations = Reservation.query.order_by(
+        Reservation.created_at.desc(), Reservation.id.desc()
+    ).all()
     return render_template("admin_dashboard.html", reservations=reservations)
 
 
