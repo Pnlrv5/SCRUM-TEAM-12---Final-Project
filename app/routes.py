@@ -174,3 +174,7 @@ def chart():
     if generate_chart_image is None:
         return "Chart unavailable", 500
     return generate_chart_image()
+    
+@routes.route("/menu")
+def menu():
+    return render_template("menu.html")
