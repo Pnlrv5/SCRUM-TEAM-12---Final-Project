@@ -13,10 +13,10 @@ def create_app():
 
     app.secret_key = "dev-secret-key"
 
-    with app.app_context():
-        init_db()
-
     app.register_blueprint(routes)
+
+    init_db(app)
+
     return app
 
 app = create_app()
