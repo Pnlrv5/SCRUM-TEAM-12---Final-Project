@@ -1,6 +1,3 @@
-import os
-print("ROUTES FILE RUNNING:", os.path.abspath(__file__))
-
 from flask import Blueprint, render_template, request, redirect, url_for, session
 from .database import db
 from .models import AdminUser, Reservation
@@ -12,12 +9,15 @@ except Exception:
 
 routes = Blueprint("routes", __name__)
 
+
 def get_cost_matrix():
     return [[100, 75, 50, 100] for _ in range(12)]
+
 
 @routes.route("/")
 def home():
     return render_template("index.html")
+
 
 @routes.route("/admin_login", methods=["GET", "POST"])
 def admin_login():
@@ -26,11 +26,20 @@ def admin_login():
         password = request.form.get("password", "").strip()
 
         if not username or not password:
-            return render_template("admin_login.html", error="Username and password are required.")
+            return render_template(
+                "admin_login.html",
+                error="Username and password are required... try again."
+            )
 
+        # ✅ SQLAlchemy query (NO sqlite3)
         admin = AdminUser.query.filter_by(username=username).first()
-        if not admin or admin.password_hash != password:
-            return render_template("admin_login.html", error="Invalid username or password.")
+
+        # Matches your seed: AdminUser(username="admin", password_hash="admin123")
+        if not admin or password != admin.password_hash:
+            return render_template(
+                "admin_login.html",
+                error="Invalid username or password."
+            )
 
         session["admin_logged_in"] = True
         session["admin_username"] = admin.username
@@ -38,11 +47,13 @@ def admin_login():
 
     return render_template("admin_login.html")
 
+
 @routes.route("/admin_logout")
 def admin_logout():
     session.pop("admin_logged_in", None)
     session.pop("admin_username", None)
     return redirect(url_for("routes.admin_login"))
+
 
 @routes.route("/admin_dashboard")
 def admin_dashboard():
@@ -51,6 +62,7 @@ def admin_dashboard():
 
     reservations = Reservation.query.order_by(Reservation.created_at.desc(), Reservation.id.desc()).all()
     return render_template("admin_dashboard.html", reservations=reservations)
+
 
 @routes.route("/new_reservation", methods=["GET", "POST"])
 def new_reservation():
@@ -63,7 +75,11 @@ def new_reservation():
         seatColumn = request.form.get("seat")
 
         if not first or not last or not seatRow or not seatColumn:
-            return render_template("new_reservation.html", error="Must have all fields filled out.", chart_img=chart_img)
+            return render_template(
+                "new_reservation.html",
+                error="Must have all fields filled out.",
+                chart_img=chart_img
+            )
 
         row = int(seatRow) - 1
         seat = int(seatColumn) - 1
@@ -72,19 +88,27 @@ def new_reservation():
 
         existing = Reservation.query.filter_by(seatRow=row, seatColumn=seat).first()
         if existing:
-            return render_template("new_reservation.html", error=f"Seat {seat_number} is already taken.", chart_img=chart_img)
+            return render_template(
+                "new_reservation.html",
+                error=f"Seat {seat_number} is already taken.",
+                chart_img=chart_img
+            )
 
+        # pricing matrix (not stored unless you add a column)
         cost_matrix = get_cost_matrix()
-        price = cost_matrix[row][seat]  # not stored, but you can add a column if needed
+        _price = cost_matrix[row][seat]
 
+        # reservation code (interleaving first name with pattern)
         pattern = "INFOTC4320"
         i = j = 0
         result = []
         while i < len(first) or j < len(pattern):
             if i < len(first):
-                result.append(first[i]); i += 1
+                result.append(first[i])
+                i += 1
             if j < len(pattern):
-                result.append(pattern[j]); j += 1
+                result.append(pattern[j])
+                j += 1
         reservation_code = "".join(result)
 
         r = Reservation(
@@ -97,15 +121,20 @@ def new_reservation():
         db.session.commit()
 
         chart_img = generate_chart_image() if generate_chart_image else None
-        success = f"Congrats {first}! Row: {row + 1}, Seat: {seat + 1} is now reserved. eTicket: {reservation_code}."
+        success = (
+            f"Congrats {first}! Row: {row + 1}, Seat: {seat + 1} is now reserved. "
+            f"eTicket: {reservation_code}."
+        )
         return render_template("new_reservation.html", chart_img=chart_img, success=success)
 
     return render_template("new_reservation.html", chart_img=chart_img)
+
 
 @routes.route("/reservations")
 def reservation_list():
     reservations = Reservation.query.order_by(Reservation.id.desc()).all()
     return render_template("reservation_list.html", reservations=reservations)
+
 
 @routes.route("/delete_reservation/<int:reservation_id>", methods=["POST"])
 def delete_reservation(reservation_id):
@@ -116,6 +145,7 @@ def delete_reservation(reservation_id):
     db.session.delete(r)
     db.session.commit()
     return redirect(url_for("routes.reservation_list"))
+
 
 @routes.route("/chart")
 def chart():
