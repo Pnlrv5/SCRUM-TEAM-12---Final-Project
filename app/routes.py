@@ -1,19 +1,24 @@
 import os
 import sqlite3
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, current_app
 
 routes = Blueprint("routes", __name__)
-DB_FILE = "reservations.db"
+DB_FILENAME = "reservations.db"
 
 
-def get_db():
-    conn = sqlite3.connect(DB_FILE)
+def db_path():
+    os.makedirs(current_app.instance_path, exist_ok=True)
+    return os.path.join(current_app.instance_path, DB_FILENAME)
+
+
+def connect():
+    conn = sqlite3.connect(db_path())
     conn.row_factory = sqlite3.Row
     return conn
 
 
 def init_db():
-    conn = get_db()
+    conn = connect()
     cur = conn.cursor()
 
     cur.execute("""
@@ -33,8 +38,8 @@ def init_db():
         )
     """)
 
-    cur.execute("SELECT COUNT(*) FROM admin_users")
-    if cur.fetchone()[0] == 0:
+    cur.execute("SELECT COUNT(*) AS c FROM admin_users")
+    if cur.fetchone()["c"] == 0:
         cur.execute(
             "INSERT INTO admin_users (username, password) VALUES (?, ?)",
             ("admin", "admin123")
@@ -42,11 +47,6 @@ def init_db():
 
     conn.commit()
     conn.close()
-
-
-@routes.before_app_first_request
-def startup():
-    init_db()
 
 
 @routes.route("/")
@@ -60,12 +60,12 @@ def admin_login():
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "").strip()
 
-        conn = get_db()
+        if not username or not password:
+            return render_template("admin_login.html", error="Username and password are required.")
+
+        conn = connect()
         cur = conn.cursor()
-        cur.execute(
-            "SELECT * FROM admin_users WHERE username = ?",
-            (username,)
-        )
+        cur.execute("SELECT * FROM admin_users WHERE username = ?", (username,))
         admin = cur.fetchone()
         conn.close()
 
@@ -73,8 +73,7 @@ def admin_login():
             session["is_admin"] = True
             return redirect(url_for("routes.admin_dashboard"))
 
-        flash("Invalid login")
-        return redirect(url_for("routes.admin_login"))
+        return render_template("admin_login.html", error="Invalid username or password.")
 
     return render_template("admin_login.html")
 
@@ -84,9 +83,9 @@ def admin_dashboard():
     if not session.get("is_admin"):
         return redirect(url_for("routes.admin_login"))
 
-    conn = get_db()
+    conn = connect()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM reservations")
+    cur.execute("SELECT * FROM reservations ORDER BY id DESC")
     reservations = cur.fetchall()
     conn.close()
 
@@ -95,9 +94,9 @@ def admin_dashboard():
 
 @routes.route("/reservations")
 def reservation_list():
-    conn = get_db()
+    conn = connect()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM reservations")
+    cur.execute("SELECT * FROM reservations ORDER BY id DESC")
     reservations = cur.fetchall()
     conn.close()
 
@@ -106,10 +105,9 @@ def reservation_list():
 
 @routes.route("/delete_reservation/<int:reservation_id>", methods=["POST"])
 def delete_reservation(reservation_id):
-    conn = get_db()
+    conn = connect()
     cur = conn.cursor()
     cur.execute("DELETE FROM reservations WHERE id = ?", (reservation_id,))
     conn.commit()
     conn.close()
-
     return redirect(url_for("routes.reservation_list"))
