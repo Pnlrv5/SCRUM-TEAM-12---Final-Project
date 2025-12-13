@@ -13,9 +13,12 @@ from flask import (
 )
 
 try:
-    from chart_generation import generate_chart_image
+    from .chart_generation import generate_chart_image
 except Exception:
-    generate_chart_image = None
+    try:
+        from chart_generation import generate_chart_image
+    except Exception:
+        generate_chart_image = None
 
 routes = Blueprint("routes", __name__)
 
@@ -33,9 +36,7 @@ def get_conn():
     return conn
 
 
-def init_db():
-    conn = get_conn()
-
+def ensure_schema(conn):
     conn.execute("""
         CREATE TABLE IF NOT EXISTS admin_users (
             username TEXT PRIMARY KEY,
@@ -54,23 +55,14 @@ def init_db():
         );
     """)
 
-    count = conn.execute(
-        "SELECT COUNT(*) FROM admin_users"
-    ).fetchone()[0]
-
-    if count == 0:
+    row = conn.execute("SELECT COUNT(*) AS cnt FROM admin_users").fetchone()
+    if row and row["cnt"] == 0:
         conn.execute(
             "INSERT INTO admin_users (username, password) VALUES (?, ?)",
             ("admin", "admin123")
         )
 
     conn.commit()
-    conn.close()
-
-
-@routes.before_app_first_request
-def setup_database():
-    init_db()
 
 
 @routes.route("/")
@@ -85,10 +77,13 @@ def admin_login():
         password = request.form.get("password", "").strip()
 
         conn = get_conn()
+        ensure_schema(conn)
+
         user = conn.execute(
-            "SELECT * FROM admin_users WHERE username = ?",
+            "SELECT username, password FROM admin_users WHERE username = ?",
             (username,)
         ).fetchone()
+
         conn.close()
 
         if user and user["password"] == password:
@@ -98,6 +93,7 @@ def admin_login():
             return redirect(url_for("routes.admin_dashboard"))
 
         flash("Invalid username or password", "error")
+        return redirect(url_for("routes.admin_login"))
 
     return render_template("admin_login.html")
 
@@ -116,15 +112,15 @@ def admin_dashboard():
         return redirect(url_for("routes.admin_login"))
 
     conn = get_conn()
+    ensure_schema(conn)
+
     reservations = conn.execute(
         "SELECT * FROM reservations ORDER BY id DESC"
     ).fetchall()
+
     conn.close()
 
-    return render_template(
-        "admin_dashboard.html",
-        reservations=reservations
-    )
+    return render_template("admin_dashboard.html", reservations=reservations)
 
 
 @routes.route("/chart")
